@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pastel Picker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #131318;
+      --surface: #1e1e26;
+      --surface2: #2a2a35;
+      --border: rgba(255,255,255,0.07);
+      --text-primary: #f0eff5;
+      --text-secondary: #8b8a99;
+      --swatch-shadow: rgba(0,0,0,0.5);
+      --btn-bg: #2a2a35;
+      --btn-hover: #35353f;
+      --copy-text: #f0eff5;
+    }
+
+    [data-theme="light"] {
+      --bg: #f5f4f9;
+      --surface: #ffffff;
+      --surface2: #ededf5;
+      --border: rgba(0,0,0,0.07);
+      --text-primary: #1a1a22;
+      --text-secondary: #7a7a8a;
+      --swatch-shadow: rgba(0,0,0,0.15);
+      --btn-bg: #ededf5;
+      --btn-hover: #e0dff0;
+      --copy-text: #1a1a22;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition), color var(--transition);
+      padding: 24px;
+    }
+
+    /* Subtle grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 40px 44px 44px;
+      width: 100%;
+      max-width: 480px;
+      transition: background var(--transition), border-color var(--transition);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+    }
+
+    .title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      transition: color var(--transition);
+    }
+
+    .title em {
+      font-style: italic;
+      opacity: 0.55;
+    }
+
+    .theme-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--btn-bg);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition), border-color var(--transition), transform 0.3s, color var(--transition);
+      flex-shrink: 0;
+    }
+    .theme-btn:hover { background: var(--btn-hover); transform: scale(1.08) rotate(15deg); }
+    .theme-btn svg { width: 18px; height: 18px; pointer-events: none; }
+
+    /* ── Swatch ── */
+    .swatch-wrapper {
+      position: relative;
+      margin-bottom: 32px;
+    }
+
+    .swatch {
+      width: 100%;
+      height: 180px;
+      border-radius: 20px;
+      transition: background-color 0.15s ease;
+      box-shadow: 0 6px 32px var(--swatch-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .swatch::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%);
+      border-radius: 20px;
+    }
+
+    /* ── Hex display ── */
+    .hex-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .hex-display {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.05rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 16px;
+      transition: background var(--transition), color var(--transition), border-color var(--transition);
+    }
+
+    .copy-btn {
+      background: var(--btn-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--copy-text);
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
+    .copy-btn:active { transform: translateY(0); }
+    .copy-btn.copied { color: #7dba8f; border-color: #7dba8f55; }
+
+    /* ── Sliders ── */
+    .sliders { display: flex; flex-direction: column; gap: 26px; margin-top: 8px; }
+
+    .slider-group { display: flex; flex-direction: column; gap: 10px; }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      transition: color var(--transition);
+    }
+
+    .slider-label span:last-child {
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      color: var(--text-primary);
+      transition: color var(--transition);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      border-radius: 100px;
+      outline: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    input[type="range"]:hover { opacity: 0.92; }
+
+    /* Hue slider - always rainbow pastel */
+    #hue-slider {
+      background: linear-gradient(to right,
+        hsl(0,55%,83%), hsl(30,55%,83%), hsl(60,55%,83%),
+        hsl(90,55%,83%), hsl(120,55%,83%), hsl(150,55%,83%),
+        hsl(180,55%,83%), hsl(210,55%,83%), hsl(240,55%,83%),
+        hsl(270,55%,83%), hsl(300,55%,83%), hsl(330,55%,83%), hsl(360,55%,83%)
+      );
+    }
+
+    /* Lightness slider built dynamically via JS */
+    #light-slider { }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid rgba(0,0,0,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: grab;
+    }
+    input[type="range"]::-webkit-slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(1.15);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid rgba(0,0,0,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      cursor: grab;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 22px;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s, background var(--transition), color var(--transition);
+      z-index: 100;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <button class="theme-btn" id="theme-btn" aria-label="Toggle theme">
+        <!-- icon injected by JS -->
+      </button>
+      <h1 class="title">Pastel <em>Picker</em></h1>
+    </div>
+
+    <div class="swatch-wrapper">
+      <div class="swatch" id="swatch"></div>
+    </div>
+
+    <div class="hex-row">
+      <div class="hex-display" id="hex-display">#f7c5d0</div>
+      <button class="copy-btn" id="copy-btn">Copy</button>
+    </div>
+
+    <div class="sliders">
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Hue</span>
+          <span id="hue-val">0°</span>
+        </div>
+        <input type="range" id="hue-slider" min="0" max="360" value="0"/>
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Lightness</span>
+          <span id="light-val">83%</span>
+        </div>
+        <input type="range" id="light-slider" min="60" max="97" value="83"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied to clipboard!</div>
+
+  <script>
+    // ── Theme ──────────────────────────────────────────────
+    const html = document.documentElement;
+    const themeBtn = document.getElementById('theme-btn');
+
+    const SUN_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <line x1="12" y1="2" x2="12" y2="5"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/>
+      <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
+      <line x1="2" y1="12" x2="5" y2="12"/>
+      <line x1="19" y1="12" x2="22" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/>
+      <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
+    </svg>`;
+
+    const MOON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>`;
+
+    let isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    function applyTheme(dark) {
+      isDark = dark;
+      html.setAttribute('data-theme', dark ? 'dark' : 'light');
+      themeBtn.innerHTML = dark ? MOON_SVG : SUN_SVG;
+    }
+
+    applyTheme(isDark);
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => applyTheme(e.matches));
+    themeBtn.addEventListener('click', () => applyTheme(!isDark));
+
+    // ── Color state ────────────────────────────────────────
+    const hueSlider   = document.getElementById('hue-slider');
+    const lightSlider = document.getElementById('light-slider');
+    const swatch      = document.getElementById('swatch');
+    const hexDisplay  = document.getElementById('hex-display');
+    const hueVal      = document.getElementById('hue-val');
+    const lightVal    = document.getElementById('light-val');
+
+    // Fixed saturation for pastel
+    const SAT = 55;
+
+    function hslToHex(h, s, l) {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+
+    function updateLightSliderTrack() {
+      const h = +hueSlider.value;
+      const gradient = `linear-gradient(to right, hsl(${h},${SAT}%,60%), hsl(${h},${SAT}%,83%), hsl(${h},${SAT}%,97%))`;
+      lightSlider.style.background = gradient;
+    }
+
+    function updateColor() {
+      const h = +hueSlider.value;
+      const l = +lightSlider.value;
+      const hex = hslToHex(h, SAT, l);
+
+      swatch.style.backgroundColor = `hsl(${h},${SAT}%,${l}%)`;
+      hexDisplay.textContent = hex.toUpperCase();
+      hueVal.textContent = `${h}°`;
+      lightVal.textContent = `${l}%`;
+      updateLightSliderTrack();
+    }
+
+    hueSlider.addEventListener('input', updateColor);
+    lightSlider.addEventListener('input', updateColor);
+    updateColor();
+
+    // ── Copy ───────────────────────────────────────────────
+    const copyBtn = document.getElementById('copy-btn');
+    const toast   = document.getElementById('toast');
+    let toastTimer;
+
+    copyBtn.addEventListener('click', () => {
+      const hex = hexDisplay.textContent;
+      const ta = document.createElement('textarea');
+      ta.value = hex;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+
+      // Also try modern API without awaiting (may silently fail in sandbox, that's ok)
+      try { navigator.clipboard.writeText(hex).catch(()=>{}); } catch(e) {}
+
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      clearTimeout(toastTimer);
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+          copyBtn.classList.remove('copied');
+        }, 300);
+      }, 1800);
+    });
+  </script>
+</body>
+</html>
